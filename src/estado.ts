@@ -1,0 +1,1 @@
+export type Estado = 'SOLICITADO' | 'CONFIRMADO' | 'EM_EXECUCAO' | 'CONCLUIDO' | 'CANCELADO';

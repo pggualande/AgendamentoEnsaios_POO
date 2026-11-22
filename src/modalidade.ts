@@ -1,0 +1,1 @@
+export type Modalidade = 'ELETRICO' | 'MECANICO';
