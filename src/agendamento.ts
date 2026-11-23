@@ -20,6 +20,6 @@ export class Agendamento {
 
 export class AgendamentoCampo extends Agendamento {
     override remarcar(novo: Intervalo): void {
-        this.intervalo = new Intervalo(novo.inicio, novo.inicio + 30);
+        this.intervalo = new Intervalo(novo.inicio(), novo.inicio() + 30);
     }
 }

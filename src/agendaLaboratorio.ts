@@ -29,10 +29,10 @@ export class AgendaLaboratorio {
         const autorizado = await this.servico.verificarAcesso(a.tecnico.matricula);
         if (!calibrado || !autorizado) throw new Error('Indisponível');
 
-        if (a.modalidade === 'ELETRICO' && (a.intervalo.fim - a.intervalo.inicio < 30 || a.intervalo.fim - a.intervalo.inicio > 120)) {
+        if (a.modalidade === 'ELETRICO' && (a.intervalo.duracao() < 30 || a.intervalo.duracao() > 120)) {
             throw new Error('Duração');
         }
-        if (a.modalidade === 'MECANICO' && (a.intervalo.fim - a.intervalo.inicio < 45 || a.intervalo.fim - a.intervalo.inicio > 180)) {
+        if (a.modalidade === 'MECANICO' && (a.intervalo.duracao() < 45 || a.intervalo.duracao() > 180)) {
             throw new Error('Duração');
         }
 
