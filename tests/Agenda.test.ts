@@ -32,7 +32,7 @@ describe('Comportamentos iniciais', () => {
     await agenda.confirmar(a);
     expect(a.estado).toBe('CONFIRMADO');
     agenda.remarcar(a, 120, 180);
-    expect(a.intervalo.inicio).toBe(120);
-    expect(a.intervalo.fim).toBe(180);
+    expect(a.intervalo.inicio()).toBe(120);
+    expect(a.intervalo.fim()).toBe(180);
   });
 });
