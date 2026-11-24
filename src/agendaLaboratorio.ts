@@ -56,7 +56,7 @@ export class AgendaLaboratorio {
     cancelar(a: Agendamento): void {
         if (a.estado !== 'SOLICITADO' && a.estado !== 'CONFIRMADO') throw new Error('Estado');
         a.estado = 'CANCELADO';
-        a.eventos.push(new RegistroTransicao(a.eventos.length + 1, a.estado, 'confirmar'));
+        a.eventos.push(new RegistroTransicao(a.eventos.length + 1, a.estado, 'cancelar'));
     }
     iniciar(a: Agendamento, _minutoAtual: number): void {
         if (a.estado !== 'CONFIRMADO') throw new Error('Estado');
