@@ -25,8 +25,8 @@ export class AgendaLaboratorio {
                 throw new Error('Conflito');
             }
         }
-        const calibrado = await this.servico.verificarCalibracao(a.equipamento.codigo);
-        const autorizado = await this.servico.verificarAcesso(a.tecnico.matricula);
+        const calibrado = await this.servico.verificarCalibracao(a.equipamento.codigo());
+        const autorizado = await this.servico.verificarAcesso(a.tecnico.matricula());
         if (!calibrado || !autorizado) throw new Error('Indisponível');
 
         if (a.modalidade === 'ELETRICO' && (a.intervalo.duracao() < 30 || a.intervalo.duracao() > 120)) {
