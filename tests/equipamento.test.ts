@@ -3,8 +3,8 @@ import { Equipamento } from '../src/equipamento';
 import { Modalidade } from '../src/modalidade';
 
 describe('Equipamento', () => {
-    describe('criação válida (R01, R02)', () => {
-        it('expõe código, nome e modalidades', () => {
+    describe('criacao valida (R01, R02)', () => {
+        it('mostra código, nome e modalidades', () => {
             const eq = new Equipamento('EQ-10', 'Osciloscópio', [Modalidade.ELETRICO]);
             expect(eq.codigo()).toBe('EQ-10');
             expect(eq.nome()).toBe('Osciloscópio');
@@ -23,35 +23,35 @@ describe('Equipamento', () => {
         });
     });
 
-    describe('entradas inválidas (T01)', () => {
+    describe('entradas invalidas (T01)', () => {
         it.each([
             ['vazio', ''],
-            ['só espaços', '   '],
-            ['tabulação e quebra de linha', '\t\n'],
-        ])('rejeita código %s', (_descricao, codigo) => {
-            expect(() => new Equipamento(codigo, 'Osciloscópio', [Modalidade.ELETRICO])).toThrow(RangeError);
+            ['so espacos', '   '],
+            ['tabulacao e quebra de linha', '\t\n'],
+        ])('rejeita codigo %s', (_descricao, codigo) => {
+            expect(() => new Equipamento(codigo, 'Osciloscopio', [Modalidade.ELETRICO])).toThrow(RangeError);
         });
 
         it.each([
             ['vazio', ''],
-            ['só espaços', '   '],
+            ['so espacos', '   '],
         ])('rejeita nome %s', (_descricao, nome) => {
             expect(() => new Equipamento('EQ-1', nome, [Modalidade.ELETRICO])).toThrow(RangeError);
         });
 
         it('rejeita lista de modalidades vazia', () => {
-            expect(() => new Equipamento('EQ-1', 'Osciloscópio', [])).toThrow(RangeError);
+            expect(() => new Equipamento('EQ-1', 'Osciloscopio', [])).toThrow(RangeError);
         });
 
         it('rejeita modalidade desconhecida', () => {
             const invalida = 'QUIMICO' as unknown as Modalidade;
-            expect(() => new Equipamento('EQ-1', 'Osciloscópio', [invalida])).toThrow(RangeError);
+            expect(() => new Equipamento('EQ-1', 'Osciloscopio', [invalida])).toThrow(RangeError);
         });
     });
 
     describe('encapsulamento (T02)', () => {
-        it('alterar o conjunto devolvido não muda o equipamento', () => {
-            const eq = new Equipamento('EQ-1', 'Osciloscópio', [Modalidade.ELETRICO]);
+        it('alterar o conjunto devolvido nao muda o equipamento', () => {
+            const eq = new Equipamento('EQ-1', 'Osciloscopio', [Modalidade.ELETRICO]);
             const consulta = eq.modalidades() as Set<Modalidade>;
             consulta.add(Modalidade.MECANICO);
             consulta.clear();
@@ -61,9 +61,9 @@ describe('Equipamento', () => {
             expect(eq.modalidades().size).toBe(1);
         });
 
-        it('alterar a lista usada na criação não muda o equipamento', () => {
+        it('alterar a lista usada na criacao nao muda o equipamento', () => {
             const lista: Modalidade[] = [Modalidade.ELETRICO];
-            const eq = new Equipamento('EQ-1', 'Osciloscópio', lista);
+            const eq = new Equipamento('EQ-1', 'Osciloscopio', lista);
             lista.push(Modalidade.MECANICO);
 
             expect(eq.suporta(Modalidade.MECANICO)).toBe(false);
