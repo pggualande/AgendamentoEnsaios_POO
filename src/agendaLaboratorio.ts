@@ -37,7 +37,7 @@ export class AgendaLaboratorio {
         }
 
         a.estado = 'CONFIRMADO';
-        a.eventos.push(new RegistroTransicao('Confirmado', a.estado));
+        a.eventos.push(new RegistroTransicao(a.eventos.length + 1, a.estado, 'confirmar'));
     }
 
     gerarResumoCSV(): string {
@@ -56,9 +56,8 @@ export class AgendaLaboratorio {
     cancelar(a: Agendamento): void {
         if (a.estado !== 'SOLICITADO' && a.estado !== 'CONFIRMADO') throw new Error('Estado');
         a.estado = 'CANCELADO';
-        a.eventos.push(new RegistroTransicao('Cancelado', a.estado));
+        a.eventos.push(new RegistroTransicao(a.eventos.length + 1, a.estado, 'confirmar'));
     }
-
     iniciar(a: Agendamento, _minutoAtual: number): void {
         if (a.estado !== 'CONFIRMADO') throw new Error('Estado');
         a.estado = 'EM_EXECUCAO';
