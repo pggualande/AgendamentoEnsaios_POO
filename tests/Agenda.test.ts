@@ -10,7 +10,7 @@ const tecnico = () => new Tecnico('T-1', 'Lia', ['ELETRICO']);
 describe('Comportamentos iniciais', () => {
   it('cria solicitação em estado inicial', () => {
     const a = new AgendaLaboratorio().solicitar('A-1', equipamento(), tecnico(), 'ELETRICO', 60, 120);
-    expect(a.estado).toBe('SOLICITADO');
+    expect(a.estado()).toBe('SOLICITADO');
   });
 
   it('detecta interseção de intervalos, preservando adjacência', () => {
@@ -23,16 +23,16 @@ describe('Comportamentos iniciais', () => {
     const agenda = new AgendaLaboratorio();
     const a = agenda.solicitar('A-2', equipamento(), tecnico(), 'ELETRICO', 60, 120);
     await agenda.confirmar(a);
-    expect(a.estado).toBe('CONFIRMADO');
+    expect(a.estado()).toBe('CONFIRMADO');
   });
 
   it('permite remarcar um agendamento confirmado para a janela solicitada', async () => {
     const agenda = new AgendaLaboratorio();
     const a = agenda.solicitar('A-3', equipamento(), tecnico(), 'ELETRICO', 60, 120);
     await agenda.confirmar(a);
-    expect(a.estado).toBe('CONFIRMADO');
+    expect(a.estado()).toBe('CONFIRMADO');
     agenda.remarcar(a, 120, 180);
-    expect(a.intervalo.inicio()).toBe(120);
-    expect(a.intervalo.fim()).toBe(180);
+    expect(a.janela().inicio()).toBe(120);
+    expect(a.janela().fim()).toBe(180);
   });
 });

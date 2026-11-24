@@ -4,7 +4,6 @@ import { Equipamento } from './equipamento';
 import { Tecnico } from './tecnico';
 import { Modalidade } from './modalidade';
 import { Intervalo } from './intervalo';
-import { RegistroTransicao } from './registroTransicao';
 
 export class AgendaLaboratorio {
     public registros: Agendamento[] = [];
@@ -18,53 +17,48 @@ export class AgendaLaboratorio {
     }
 
     async confirmar(a: Agendamento): Promise<void> {
-        if (a.estado !== 'SOLICITADO') throw new Error('Estado');
+        if (a.estado() !== 'SOLICITADO') throw new Error('Estado');
         for (const atual of this.registros) {
-            if (atual !== a && atual.estado === 'CONFIRMADO' &&
-                atual.equipamento === a.equipamento && atual.intervalo.sobrepoe(a.intervalo)) {
+            if (atual !== a && atual.estado() === 'CONFIRMADO' &&
+                atual.usaEquipamento(a.equipamento()) && atual.janela().sobrepoe(a.janela())) {
                 throw new Error('Conflito');
             }
         }
-        const calibrado = await this.servico.verificarCalibracao(a.equipamento.codigo());
-        const autorizado = await this.servico.verificarAcesso(a.tecnico.matricula());
-        if (!calibrado || !autorizado) throw new Error('Indisponível');
+        const calibrado = await this.servico.verificarCalibracao(a.equipamento().codigo());
+        const autorizado = await this.servico.verificarAcesso(a.tecnico().matricula());
+        if (!calibrado || !autorizado) throw new Error('Indisponivel');
 
-        if (a.modalidade === 'ELETRICO' && (a.intervalo.duracao() < 30 || a.intervalo.duracao() > 120)) {
-            throw new Error('Duração');
+        if (a.modalidade() === 'ELETRICO' && (a.janela().duracao() < 30 || a.janela().duracao() > 120)) {
+            throw new Error('Duracao');
         }
-        if (a.modalidade === 'MECANICO' && (a.intervalo.duracao() < 45 || a.intervalo.duracao() > 180)) {
-            throw new Error('Duração');
+        if (a.modalidade() === 'MECANICO' && (a.janela().duracao() < 45 || a.janela().duracao() > 180)) {
+            throw new Error('Duracao');
         }
 
-        a.estado = 'CONFIRMADO';
-        a.eventos.push(new RegistroTransicao(a.eventos.length + 1, a.estado, 'confirmar'));
+        a.confirmar();
     }
 
     gerarResumoCSV(): string {
         const linhas = ['codigo;estado;inicio;fim'];
         for (const a of this.registros) {
-            linhas.push(`${a.codigo};${a.estado};${a.intervalo.inicio};${a.intervalo.fim}`);
+            linhas.push(`${a.codigo()};${a.estado()};${a.janela().inicio()};${a.janela().fim()}`);
         }
         return linhas.join('\n');
     }
 
     remarcar(a: Agendamento, inicio: number, fim: number): void {
-        if (a.estado !== 'CONFIRMADO') throw new Error('Estado');
         a.remarcar(new Intervalo(inicio, fim));
     }
 
     cancelar(a: Agendamento): void {
-        if (a.estado !== 'SOLICITADO' && a.estado !== 'CONFIRMADO') throw new Error('Estado');
-        a.estado = 'CANCELADO';
-        a.eventos.push(new RegistroTransicao(a.eventos.length + 1, a.estado, 'cancelar'));
+        a.cancelar();
     }
-    iniciar(a: Agendamento, _minutoAtual: number): void {
-        if (a.estado !== 'CONFIRMADO') throw new Error('Estado');
-        a.estado = 'EM_EXECUCAO';
+
+    iniciar(a: Agendamento, minutoAtual: number): void {
+        a.iniciar(minutoAtual);
     }
 
     concluir(a: Agendamento): void {
-        if (a.estado !== 'EM_EXECUCAO') throw new Error('Estado');
-        a.estado = 'CONCLUIDO';
+        a.concluir();
     }
 }
