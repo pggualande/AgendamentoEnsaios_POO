@@ -166,6 +166,45 @@ describe('AgendaLaboratorio', () => {
         });
     });
 
+    describe('confirmar: integracao com servicos externos (R09, R10)', () => {
+        it('confirma solicitacao com servicos disponiveis (vira CONFIRMADO)', async () => {
+            const { agenda, calibracao, acesso } = criarAgenda();
+            agenda.solicitar('A-2', equipamento(), tecnico(), Modalidade.ELETRICO, new Intervalo(60, 120));
+
+            await agenda.confirmar('A-2');
+
+            expect(agenda.consultarEstado('A-2')).toBe(Estado.CONFIRMADO);
+            // Garante que o verificador foi chamado usando o código do equipamento
+            expect(calibracao.verificarCalibracao).toHaveBeenCalledWith('EQ-10');
+            // Garante que o verificador foi chamado usando a matrícula do técnico
+            expect(acesso.verificarAcesso).toHaveBeenCalledWith('TC-04');
+        });
+
+        it('rejeita confirmacao se o equipamento reprovar na calibracao', async () => {
+            const { agenda, calibracao } = criarAgenda();
+            // Forçamos o mock a retornar false para simular a falha
+            calibracao.verificarCalibracao.mockResolvedValue(false);
+
+            agenda.solicitar('A-3', equipamento(), tecnico(), Modalidade.ELETRICO, new Intervalo(60, 120));
+
+            await expect(agenda.confirmar('A-3')).rejects.toThrow(Error);
+
+            // O estado deve continuar intacto (SOLICITADO) porque a operação falhou
+            expect(agenda.consultarEstado('A-3')).toBe(Estado.SOLICITADO);
+        });
+
+        it('rejeita confirmacao se o tecnico nao tiver acesso liberado', async () => {
+            const { agenda, acesso } = criarAgenda();
+            acesso.verificarAcesso.mockResolvedValue(false);
+
+            agenda.solicitar('A-4', equipamento(), tecnico(), Modalidade.ELETRICO, new Intervalo(60, 120));
+
+            await expect(agenda.confirmar('A-4')).rejects.toThrow(Error);
+
+            expect(agenda.consultarEstado('A-4')).toBe(Estado.SOLICITADO);
+        });
+    });
+
     describe('consultas de codigo inexistente', () => {
         it.each([
             ['consultarEstado', (a: AgendaLaboratorio) => a.consultarEstado('X-1')],

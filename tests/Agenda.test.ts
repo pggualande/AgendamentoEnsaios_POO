@@ -1,16 +1,25 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { AgendaLaboratorio } from '../src/agendaLaboratorio';
 import { Equipamento } from '../src/equipamento';
 import { Intervalo } from '../src/intervalo';
+import { PoliticaEletrica } from '../src/politicaEletrica';
+import { PoliticaMecanica } from '../src/politicaMecanica';
 import { Tecnico } from '../src/tecnico';
 
-const equipamento = () => new Equipamento('EQ-1', 'Osciloscópio', ['ELETRICO']);
+const equipamento = () => new Equipamento('EQ-1', 'Osciloscopio', ['ELETRICO']);
 const tecnico = () => new Tecnico('T-1', 'Lia', ['ELETRICO']);
 
+const novaAgenda = () => new AgendaLaboratorio(
+  { verificarCalibracao: vi.fn().mockResolvedValue(true) },
+  { verificarAcesso: vi.fn().mockResolvedValue(true) },
+  [new PoliticaEletrica(), new PoliticaMecanica()],
+);
+
 describe('Comportamentos iniciais', () => {
-  it('cria solicitação em estado inicial', () => {
-    const a = new AgendaLaboratorio().solicitar('A-1', equipamento(), tecnico(), 'ELETRICO', 60, 120);
-    expect(a.estado()).toBe('SOLICITADO');
+  it('cria solicitacao em estado inicial', () => {
+    const agenda = novaAgenda();
+    agenda.solicitar('A-1', equipamento(), tecnico(), 'ELETRICO', new Intervalo(60, 120));
+    expect(agenda.consultarEstado('A-1')).toBe('SOLICITADO');
   });
 
   it('detecta interseção de intervalos, preservando adjacência', () => {
@@ -19,20 +28,24 @@ describe('Comportamentos iniciais', () => {
     expect(x.sobrepoe(new Intervalo(120, 180))).toBe(false);
   });
 
-  it('confirma solicitação com serviço local disponível', async () => {
-    const agenda = new AgendaLaboratorio();
-    const a = agenda.solicitar('A-2', equipamento(), tecnico(), 'ELETRICO', 60, 120);
-    await agenda.confirmar(a);
-    expect(a.estado()).toBe('CONFIRMADO');
+
+  it('confirma solicitacao com servico disponivel (A-2 vira CONFIRMADO)', async () => {
+    const agenda = novaAgenda();
+    agenda.solicitar('A-2', equipamento(), tecnico(), 'ELETRICO', new Intervalo(60, 120));
+
+    await agenda.confirmar('A-2');
+
+    expect(agenda.consultarEstado('A-2')).toBe('CONFIRMADO');
   });
 
-  it('permite remarcar um agendamento confirmado para a janela solicitada', async () => {
-    const agenda = new AgendaLaboratorio();
-    const a = agenda.solicitar('A-3', equipamento(), tecnico(), 'ELETRICO', 60, 120);
-    await agenda.confirmar(a);
-    expect(a.estado()).toBe('CONFIRMADO');
-    agenda.remarcar(a, 120, 180);
-    expect(a.janela().inicio()).toBe(120);
-    expect(a.janela().fim()).toBe(180);
+  it('permite remarcar um agendamento confirmado pra janela 120-180', async () => {
+    const agenda = novaAgenda();
+    agenda.solicitar('A-3', equipamento(), tecnico(), 'ELETRICO', new Intervalo(60, 120));
+    await agenda.confirmar('A-3');
+
+    agenda.remarcar('A-3', new Intervalo(120, 180));
+
+    expect(agenda.consultarJanela('A-3').inicio()).toBe(120);
+    expect(agenda.consultarJanela('A-3').fim()).toBe(180);
   });
 });

@@ -46,6 +46,47 @@ export class AgendaLaboratorio {
         this._agendamentos.push(novo);
     }
 
+    async confirmar(codigo: string): Promise<void> {
+        const agendamento = this.buscar(codigo);
+
+        const equipamentoOk = await this._calibracao.verificarCalibracao(agendamento.equipamento().codigo());
+        if (!equipamentoOk) {
+            throw new Error('Equipamento reprovado na verificação de calibração');
+        }
+
+        const acessoOk = await this._acesso.verificarAcesso(agendamento.tecnico().matricula()); // Ou .matricula(), confira no seu Tecnico
+        if (!acessoOk) {
+            throw new Error('Técnico não possui acesso liberado para este laboratório');
+        }
+
+        agendamento.confirmar();
+    }
+
+    remarcar(codigo: string, novaJanela: Intervalo): void {
+        if (!novaJanela) throw new RangeError('Faltou a nova janela');
+
+        const agendamento = this.buscar(codigo);
+
+        const politica = this._politicas.find((p) => p.modalidade() === agendamento.modalidade());
+        if (!politica) {
+            throw new RangeError(`Nao tem politica de duracao pra modalidade ${String(agendamento.modalidade())}`);
+        }
+        politica.validar(novaJanela);
+
+        const temConflito = this._agendamentos.some((outro) => {
+            if (outro.codigo() === codigo || !outro.ocupaRecursos()) return false;
+
+            const usaMesmoRecurso = outro.usaEquipamento(agendamento.equipamento()) || outro.usaTecnico(agendamento.tecnico());
+            return usaMesmoRecurso && outro.janela().sobrepoe(novaJanela);
+        });
+
+        if (temConflito) {
+            throw new Error(`Conflito detectado: o equipamento ou tecnico ja estao ocupados na janela solicitada`);
+        }
+
+        agendamento.remarcar(novaJanela);
+    }
+
     consultarEstado(codigo: string): Estado {
         return this.buscar(codigo).estado();
     }
