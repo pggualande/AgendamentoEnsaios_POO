@@ -1,64 +1,66 @@
 import { Agendamento } from './agendamento';
-import { ServicoLocal } from './servicosLaboratorio';
-import { Equipamento } from './equipamento';
-import { Tecnico } from './tecnico';
-import { Modalidade } from './modalidade';
-import { Intervalo } from './intervalo';
+import type { Equipamento } from './equipamento';
+import type { Estado } from './estado';
+import type { Intervalo } from './intervalo';
+import type { Modalidade } from './modalidade';
+import type { PoliticaDuracao } from './politicaDuracao';
+import type { RegistroTransicao } from './registroTransicao';
+import type { Tecnico } from './tecnico';
+import type { VerificadorAcesso } from './verificadorAcesso';
+import type { VerificadorCalibracao } from './verificadorCalibracao';
 
 export class AgendaLaboratorio {
-    public registros: Agendamento[] = [];
-    private servico = new ServicoLocal();
+    private _calibracao: VerificadorCalibracao;
+    private _acesso: VerificadorAcesso;
+    private _politicas: PoliticaDuracao[];
+    private _agendamentos: Agendamento[] = [];
 
-    solicitar(codigo: string, equipamento: Equipamento, tecnico: Tecnico, modalidade: Modalidade,
-        inicio: number, fim: number): Agendamento {
-        const a = new Agendamento(codigo, equipamento, tecnico, modalidade, new Intervalo(inicio, fim));
-        this.registros.push(a);
-        return a;
-    }
-
-    async confirmar(a: Agendamento): Promise<void> {
-        if (a.estado() !== 'SOLICITADO') throw new Error('Estado');
-        for (const atual of this.registros) {
-            if (atual !== a && atual.estado() === 'CONFIRMADO' &&
-                atual.usaEquipamento(a.equipamento()) && atual.janela().sobrepoe(a.janela())) {
-                throw new Error('Conflito');
-            }
-        }
-        const calibrado = await this.servico.verificarCalibracao(a.equipamento().codigo());
-        const autorizado = await this.servico.verificarAcesso(a.tecnico().matricula());
-        if (!calibrado || !autorizado) throw new Error('Indisponivel');
-
-        if (a.modalidade() === 'ELETRICO' && (a.janela().duracao() < 30 || a.janela().duracao() > 120)) {
-            throw new Error('Duracao');
-        }
-        if (a.modalidade() === 'MECANICO' && (a.janela().duracao() < 45 || a.janela().duracao() > 180)) {
-            throw new Error('Duracao');
+    constructor(calibracao: VerificadorCalibracao, acesso: VerificadorAcesso,
+        politicas: PoliticaDuracao[]) {
+        if (!calibracao) throw new RangeError('Faltou o verificador de calibracao');
+        if (!acesso) throw new RangeError('Faltou o verificador de acesso');
+        if (!Array.isArray(politicas) || politicas.length === 0) {
+            throw new RangeError('Precisa de pelo menos uma politica de duracao');
         }
 
-        a.confirmar();
+        this._calibracao = calibracao;
+        this._acesso = acesso;
+        this._politicas = [...politicas];
     }
 
-    gerarResumoCSV(): string {
-        const linhas = ['codigo;estado;inicio;fim'];
-        for (const a of this.registros) {
-            linhas.push(`${a.codigo()};${a.estado()};${a.janela().inicio()};${a.janela().fim()}`);
+    solicitar(codigo: string, equipamento: Equipamento, tecnico: Tecnico,
+        modalidade: Modalidade, janela: Intervalo): void {
+        if (!janela) throw new RangeError('Faltou a janela');
+
+        const politica = this._politicas.find((p) => p.modalidade() === modalidade);
+        if (!politica) {
+            throw new RangeError(`Nao tem politica de duracao pra modalidade ${String(modalidade)}`);
         }
-        return linhas.join('\n');
+        politica.validar(janela);
+
+        if (this._agendamentos.some((a) => a.codigo() === codigo)) {
+            throw new RangeError(`Ja existe agendamento com o codigo ${codigo}`);
+        }
+
+        const novo = new Agendamento(codigo, equipamento, tecnico, modalidade, janela);
+        this._agendamentos.push(novo);
     }
 
-    remarcar(a: Agendamento, inicio: number, fim: number): void {
-        a.remarcar(new Intervalo(inicio, fim));
+    consultarEstado(codigo: string): Estado {
+        return this.buscar(codigo).estado();
     }
 
-    cancelar(a: Agendamento): void {
-        a.cancelar();
+    consultarJanela(codigo: string): Intervalo {
+        return this.buscar(codigo).janela();
     }
 
-    iniciar(a: Agendamento, minutoAtual: number): void {
-        a.iniciar(minutoAtual);
+    consultarHistorico(codigo: string): ReadonlyArray<RegistroTransicao> {
+        return this.buscar(codigo).historico();
     }
 
-    concluir(a: Agendamento): void {
-        a.concluir();
+    private buscar(codigo: string): Agendamento {
+        const achado = this._agendamentos.find((a) => a.codigo() === codigo);
+        if (!achado) throw new RangeError(`Nao existe agendamento com o codigo ${codigo}`);
+        return achado;
     }
 }
