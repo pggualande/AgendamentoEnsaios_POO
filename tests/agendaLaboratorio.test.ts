@@ -182,14 +182,12 @@ describe('AgendaLaboratorio', () => {
 
         it('rejeita confirmacao se o equipamento reprovar na calibracao', async () => {
             const { agenda, calibracao } = criarAgenda();
-            // Forçamos o mock a retornar false para simular a falha
             calibracao.verificarCalibracao.mockResolvedValue(false);
 
             agenda.solicitar('A-3', equipamento(), tecnico(), Modalidade.ELETRICO, new Intervalo(60, 120));
 
             await expect(agenda.confirmar('A-3')).rejects.toThrow(Error);
 
-            // O estado deve continuar intacto (SOLICITADO) porque a operação falhou
             expect(agenda.consultarEstado('A-3')).toBe(Estado.SOLICITADO);
         });
 
@@ -202,6 +200,42 @@ describe('AgendaLaboratorio', () => {
             await expect(agenda.confirmar('A-4')).rejects.toThrow(Error);
 
             expect(agenda.consultarEstado('A-4')).toBe(Estado.SOLICITADO);
+        });
+    });
+
+    describe('transicoes de estado: cancelar, iniciar e concluir (R13, R14, R15)', () => {
+        it('cancela um agendamento (SOLICITADO ou CONFIRMADO)', async () => {
+            const { agenda } = criarAgenda();
+
+            agenda.solicitar('A-10', equipamento(), tecnico(), Modalidade.ELETRICO, new Intervalo(60, 120));
+            agenda.cancelar('A-10');
+            expect(agenda.consultarEstado('A-10')).toBe(Estado.CANCELADO);
+
+            agenda.solicitar('A-11', equipamento(), tecnico(), Modalidade.ELETRICO, new Intervalo(120, 180));
+            await agenda.confirmar('A-11');
+            agenda.cancelar('A-11');
+            expect(agenda.consultarEstado('A-11')).toBe(Estado.CANCELADO);
+        });
+
+        it('inicia um agendamento CONFIRMADO dentro da janela', async () => {
+            const { agenda } = criarAgenda();
+            agenda.solicitar('A-12', equipamento(), tecnico(), Modalidade.ELETRICO, new Intervalo(60, 120));
+            await agenda.confirmar('A-12');
+
+            agenda.iniciar('A-12', 60);
+
+            expect(agenda.consultarEstado('A-12')).toBe(Estado.EM_EXECUCAO);
+        });
+
+        it('conclui um agendamento EM_EXECUCAO', async () => {
+            const { agenda } = criarAgenda();
+            agenda.solicitar('A-13', equipamento(), tecnico(), Modalidade.ELETRICO, new Intervalo(60, 120));
+            await agenda.confirmar('A-13');
+            agenda.iniciar('A-13', 75);
+
+            agenda.concluir('A-13');
+
+            expect(agenda.consultarEstado('A-13')).toBe(Estado.CONCLUIDO);
         });
     });
 
