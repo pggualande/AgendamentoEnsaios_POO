@@ -15,7 +15,7 @@ async function main() {
     const tecnica = new Tecnico('TC-04', 'Técnica Responsável', ['ELETRICO']);
 
     agenda.solicitar('AG-01', osciloscopio, tecnica, 'ELETRICO', new Intervalo(60, 120));
-    console.log('Agendamento criado:', solicitacao);
+
 
     try {
         await agenda.confirmar('AG-01');
