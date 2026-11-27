@@ -1,6 +1,6 @@
 import { Agendamento } from './agendamento';
 import type { Equipamento } from './equipamento';
-import type { Estado } from './estado';
+import { Estado } from './estado';
 import type { Intervalo } from './intervalo';
 import type { Modalidade } from './modalidade';
 import type { PoliticaDuracao } from './politicaDuracao';
@@ -49,16 +49,26 @@ export class AgendaLaboratorio {
     async confirmar(codigo: string): Promise<void> {
         const agendamento = this.buscar(codigo);
 
+        if (agendamento.estado() !== Estado.SOLICITADO) {
+            throw new Error(`So da pra confirmar quem ta SOLICITADO (esse ta ${agendamento.estado()})`);
+        }
+        if (this.existeConflito(agendamento, agendamento.janela())) {
+            throw new Error('Conflito: o equipamento ou o tecnico ja estao ocupados nessa janela');
+        }
+
         const equipamentoOk = await this._calibracao.verificarCalibracao(agendamento.equipamento().codigo());
         if (!equipamentoOk) {
-            throw new Error('Equipamento reprovado na verificação de calibração');
+            throw new Error('Equipamento reprovado na verificacao de calibracao');
         }
 
-        const acessoOk = await this._acesso.verificarAcesso(agendamento.tecnico().matricula()); // Ou .matricula(), confira no seu Tecnico
+        const acessoOk = await this._acesso.verificarAcesso(agendamento.tecnico().matricula());
         if (!acessoOk) {
-            throw new Error('Técnico não possui acesso liberado para este laboratório');
+            throw new Error('Tecnico sem acesso liberado');
         }
 
+        if (this.existeConflito(agendamento, agendamento.janela())) {
+            throw new Error('Conflito: o equipamento ou o tecnico foram ocupados enquanto a confirmacao esperava');
+        }
         agendamento.confirmar();
     }
 
@@ -73,33 +83,23 @@ export class AgendaLaboratorio {
         }
         politica.validar(novaJanela);
 
-        const temConflito = this._agendamentos.some((outro) => {
-            if (outro.codigo() === codigo || !outro.ocupaRecursos()) return false;
-
-            const usaMesmoRecurso = outro.usaEquipamento(agendamento.equipamento()) || outro.usaTecnico(agendamento.tecnico());
-            return usaMesmoRecurso && outro.janela().sobrepoe(novaJanela);
-        });
-
-        if (temConflito) {
-            throw new Error(`Conflito detectado: o equipamento ou tecnico ja estao ocupados na janela solicitada`);
+        if (this.existeConflito(agendamento, novaJanela)) {
+            throw new Error('Conflito: o equipamento ou o tecnico ja estao ocupados na janela pedida');
         }
 
         agendamento.remarcar(novaJanela);
     }
 
     cancelar(codigo: string): void {
-        const agendamento = this.buscar(codigo);
-        agendamento.cancelar();
+        this.buscar(codigo).cancelar();
     }
 
     iniciar(codigo: string, minutoAtual: number): void {
-        const agendamento = this.buscar(codigo);
-        agendamento.iniciar(minutoAtual);
+        this.buscar(codigo).iniciar(minutoAtual);
     }
 
     concluir(codigo: string): void {
-        const agendamento = this.buscar(codigo);
-        agendamento.concluir();
+        this.buscar(codigo).concluir();
     }
 
     consultarEstado(codigo: string): Estado {
@@ -112,6 +112,16 @@ export class AgendaLaboratorio {
 
     consultarHistorico(codigo: string): ReadonlyArray<RegistroTransicao> {
         return this.buscar(codigo).historico();
+    }
+
+    private existeConflito(candidato: Agendamento, janela: Intervalo): boolean {
+        return this._agendamentos.some((outro) => {
+            if (outro === candidato || !outro.ocupaRecursos()) return false;
+
+            const mesmoRecurso = outro.usaEquipamento(candidato.equipamento())
+                || outro.usaTecnico(candidato.tecnico());
+            return mesmoRecurso && outro.janela().sobrepoe(janela);
+        });
     }
 
     private buscar(codigo: string): Agendamento {

@@ -12,7 +12,7 @@ export class Equipamento {
 
         }
         if (typeof nome !== 'string' || nome.trim() === '') {
-            throw new RangeError('O codigo do equipamento não pode ser vazio');
+            throw new RangeError('O nome do equipamento nao pode ser vazio');
 
         }
         if (!Array.isArray(modalidades) || modalidades.length === 0) {
