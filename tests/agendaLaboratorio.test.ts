@@ -10,6 +10,8 @@ import { PoliticaMecanica } from '../src/politicaMecanica';
 import { Tecnico } from '../src/tecnico';
 import type { VerificadorAcesso } from '../src/verificadorAcesso';
 import type { VerificadorCalibracao } from '../src/verificadorCalibracao';
+import { RegistroTransicao } from '../src/registroTransicao';
+
 
 const equipamento = () => new Equipamento('EQ-10', 'Osciloscopio', [Modalidade.ELETRICO]);
 const tecnico = () => new Tecnico('TC-04', 'Lia', [Modalidade.ELETRICO]);
@@ -45,6 +47,24 @@ describe('AgendaLaboratorio', () => {
 
         it('rejeita lista de politicas vazia', () => {
             expect(() => new AgendaLaboratorio(calibracao, acesso, [])).toThrow(RangeError);
+        });
+        describe('consultas seguras (R16, T19)', () => {
+            it('impede que alteracoes no array retornado afetem o historico interno da agenda', () => {
+                const { agenda } = criarAgenda();
+                agenda.solicitar('A-20', equipamento(), tecnico(), Modalidade.ELETRICO, new Intervalo(60, 120));
+
+                // Pega o histórico e "engana" o TypeScript com 'as any' para tentar hackear o array
+                const historicoRecebido = agenda.consultarHistorico('A-20') as any;
+
+                // Tenta sujar o array recebido com dados falsos
+                historicoRecebido.push(new RegistroTransicao(2, Estado.CONFIRMADO, 'hackear-confirmacao'));
+                historicoRecebido[0] = null;
+
+                // Consulta de novo para garantir que a agenda permaneceu blindada e intacta
+                const historicoReal = agenda.consultarHistorico('A-20');
+                expect(historicoReal).toHaveLength(1);
+                expect(historicoReal[0]?.estado()).toBe(Estado.SOLICITADO);
+            });
         });
     });
 

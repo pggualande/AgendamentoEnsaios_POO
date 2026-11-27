@@ -87,6 +87,21 @@ export class AgendaLaboratorio {
         agendamento.remarcar(novaJanela);
     }
 
+    cancelar(codigo: string): void {
+        const agendamento = this.buscar(codigo);
+        agendamento.cancelar();
+    }
+
+    iniciar(codigo: string, minutoAtual: number): void {
+        const agendamento = this.buscar(codigo);
+        agendamento.iniciar(minutoAtual);
+    }
+
+    concluir(codigo: string): void {
+        const agendamento = this.buscar(codigo);
+        agendamento.concluir();
+    }
+
     consultarEstado(codigo: string): Estado {
         return this.buscar(codigo).estado();
     }
